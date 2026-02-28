@@ -2,47 +2,55 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>MEGA PRO Upload</title>
+<title>MEGA Upload Center</title>
 
 <script src="https://cdn.jsdelivr.net/npm/megajs@1.1.3/dist/main.browser-umd.js"></script>
 
 <style>
 body{
-font-family:Arial;
-background:#020617;
-color:white;
-padding:20px;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
 }
 
 .card{
-background:#0f172a;
-padding:20px;
-border-radius:16px;
-max-width:500px;
-margin:auto;
+  background:#1e293b;
+  padding:25px;
+  border-radius:18px;
+  width:350px;
 }
 
-.drop{
-border:2px dashed #38bdf8;
-padding:20px;
-text-align:center;
-margin-top:15px;
-border-radius:10px;
+input,select,button{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  border:none;
 }
 
-.file{
-margin-top:10px;
-background:#020617;
-padding:10px;
-border-radius:10px;
+button{
+  background:#22c55e;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.progress{
+  margin-top:15px;
+  height:10px;
+  background:#334155;
+  border-radius:10px;
 }
 
 .bar{
-height:6px;
-background:#22c55e;
-width:0%;
-margin-top:5px;
-border-radius:10px;
+  height:100%;
+  width:0%;
+  background:#22c55e;
+  border-radius:10px;
 }
 </style>
 </head>
@@ -51,111 +59,82 @@ border-radius:10px;
 
 <div class="card">
 
-<h2>☁️ MEGA PRO UPLOADER</h2>
+<h2>🚀 MEGA Upload</h2>
 
-<h4>Akun 1</h4>
-<input id="email1" placeholder="Email">
-<input id="pass1" type="password" placeholder="Password">
+<input id="email" placeholder="Email MEGA">
+<input id="pass" type="password" placeholder="Password">
 
-<h4>Akun 2</h4>
-<input id="email2" placeholder="Email">
-<input id="pass2" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
 
-<button onclick="loginAll()">LOGIN SEMUA</button>
-
-<div class="drop" id="drop">
-📂 Drag & Drop File di sini
-</div>
+<select id="folder"></select>
 
 <input type="file" id="files" multiple>
 
-<div id="list"></div>
+<button onclick="upload()">Upload</button>
+
+<div class="progress"><div class="bar" id="bar"></div></div>
+
+<p id="status"></p>
 
 </div>
 
 <script>
 
-let mega1, mega2;
+let mega;
 
-function saveSession(key,data){
-localStorage.setItem(key,JSON.stringify(data));
-}
+function login(){
 
-function getSession(key){
-return JSON.parse(localStorage.getItem(key));
-}
+status.innerText="Logging in...";
 
-function loginAll(){
-
-mega1 = new Mega({
-email:email1.value,
-password:pass1.value,
-keepalive:true
+mega = new Mega({
+  email: email.value,
+  password: pass.value,
+  keepalive:true
 });
 
-mega2 = new Mega({
-email:email2.value,
-password:pass2.value,
-keepalive:true
+mega.on('ready', () => {
+
+status.innerText="✅ Login sukses";
+
+folder.innerHTML="";
+
+mega.root.children.forEach(f=>{
+  if(f.directory){
+    folder.innerHTML += `<option value="${f.nodeId}">${f.name}</option>`;
+  }
 });
 
-mega1.on('ready',()=>console.log("MEGA1 OK"));
-mega2.on('ready',()=>console.log("MEGA2 OK"));
-}
-
-function getType(file){
-
-let ext = file.name.split('.').pop().toLowerCase();
-
-if(["jpg","png","jpeg","webp"].includes(ext)) return "foto";
-if(["mp4","mkv","avi"].includes(ext)) return "video";
-return "dokumen";
-}
-
-function targetMega(type){
-
-if(type=="video") return mega2;
-return mega1;
-}
-
-async function uploadFile(file){
-
-let type = getType(file);
-let mega = targetMega(type);
-
-let folder = mega.root;
-
-let div = document.createElement("div");
-div.className="file";
-div.innerHTML=file.name+"<div class='bar'></div>";
-
-list.appendChild(div);
-
-let bar = div.querySelector(".bar");
-
-let up = folder.upload(file);
-
-up.on('progress',p=>{
-bar.style.width=(p*100)+"%";
 });
 
-await new Promise(res=>up.on('complete',res));
+mega.on('error', e=>{
+status.innerText="❌ Login gagal";
+});
 }
 
-function handleFiles(files){
-[...files].forEach(uploadFile);
+async function upload(){
+
+let files = document.getElementById("files").files;
+
+if(!files.length) return;
+
+let target = mega.find(folder.value);
+
+for(let file of files){
+
+status.innerText="Uploading "+file.name;
+
+let up = target.upload(file);
+
+up.on('progress', p=>{
+bar.style.width = (p*100)+"%";
+});
+
+await new Promise(res=>up.on('complete', res));
 }
 
-files.onchange = e=>handleFiles(e.target.files);
-
-drop.ondragover = e=>{
-e.preventDefault();
-};
-
-drop.ondrop = e=>{
-e.preventDefault();
-handleFiles(e.dataTransfer.files);
-};
+status.innerText="✅ Semua file selesai";
+bar.style.width="0%";
+}
 
 </script>
 
